@@ -9,3 +9,4 @@ urlpatterns = [
     path('ticker/', views.Ticker, name='ticker'),
 ]
 
+

@@ -1,5 +1,3 @@
-## Database tables for the website
-
 from django.db import models
 
 class User(models.Model):
