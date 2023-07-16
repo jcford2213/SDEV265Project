@@ -10,15 +10,18 @@ from .apiconnection import getStockData
 def returnTickerData(request):
     if request.method == 'POST':
         
-        # Check for existing ticker arg
+        # Check for existing ticker from client
         if not request.data['ticker']:
             return Response({'error': 'Ticker not provided'}, status=400)
         
         # Attempt to access ticker from yfinance
         try:
           stockData = getStockData(request.data['ticker'])
-        except:
-           return Response({'error': f'{request.data["ticker"]} is not a valid stock symbol'}, status=500)
+          
+        except Exception as error:
+          #  Sends an error message to client. args[0]is where the message value is stored
+           return Response({'error': error.args[0]}, status=500)
+        
         else:
           return Response(stockData, status=200)
         
