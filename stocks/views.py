@@ -3,7 +3,7 @@
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 
-from .apiconnection import getStockData
+from .utils.apiconnection import getStockData
 
 
 @api_view(['POST'])
