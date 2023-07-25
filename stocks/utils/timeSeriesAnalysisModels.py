@@ -19,8 +19,8 @@ def getArModel(close_prices_week, close_prices_month):
   return {
     'fitted_values_weekly': fitted_values_weekly_ar,
     'fitted_values_monthly': fitted_values_monthly_ar
-  }
-  
+}
+
 
 def getMaModel(close_prices_week, close_prices_month):
   ## MA Model

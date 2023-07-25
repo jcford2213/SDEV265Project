@@ -1,94 +1,78 @@
-# from rest_framework import viewsets
+from rest_framework import status
 from rest_framework.response import Response
-from rest_framework.decorators import api_view
-# from django.contrib.auth import authenticate, login
-from .models import User
-from .serializers import UserSerializer
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import IsAuthenticated, AllowAny
+from django.contrib.auth import authenticate, login, logout
+from django.contrib.auth.models import User
+from .serializer import UserSerializer
+from stocks.models import TrackedStock
 
-# Performs CRUD operations on User model based on http request method
+# from rest_framework.decorators import api_view
 
-
-# Signing up new user
-# Returns object username: String, tracked_stocks: List[]
 @api_view(['POST'])
-def signup_user(request):
-    try:
-      serializer = UserSerializer(data=request.data)
-      if serializer.is_valid():
-          serializer.save()
-          print(serializer.data['id'])
-      else:
-         raise Exception
-      return Response({'id': serializer.data['id'], 'username': serializer.data['username'], 'tracked_stocks': serializer.data['tracked_stocks']}, status=201)
-    except Exception as e:
-        print('Error: ', e)
-        return Response({'error': f'An account with username {request.data["username"]} and or {request.data["email"]} already exists.'}, status=401)
-      
+@permission_classes([AllowAny])
+def user_registration(request):
+    if request.method != 'POST':
+        return Response(status=status.HTTP_405_METHOD_NOT_ALLOWED)
 
-# Logging in existing user
-# Returning object userName: String, tracked_stocks: List
-@api_view(['POST'])
-def login_user(request):
-    # Get http request data
-    username = request.data['username']
-    password = request.data['password']
-    print(username, ' ', password)
-    # Compare http request arguments with database user
-    try:
-      # get user based on http request data. Will raise exception if either doesn't match
-      user = User.objects.get(username=username, password=password)
-      if user.username == username and user.password == password:
-        tracked_stocks = User.objects.values('tracked_stocks').get(username=username)
-        return Response({'id': user.id, 'username': user.username, 'tracked_stocks': tracked_stocks}, status=201)
-      else:
-          raise Exception()
-      
-    except Exception as e:
-        print('Error: ', e)
-        return Response('username or password incorrect', status=401)
+    # Get the data from the request
+    username = request.data.get('username')
+    password = request.data.get('password')
+    email = request.data.get('email')
+
+    if not username or not password:
+        return Response({'error': 'Both username and password are required.'}, status=status.HTTP_400_BAD_REQUEST)
     
-@api_view(['PATCH'])
-def add_stock(request):
-    try:
-        user = User.objects.get(id=request.data.id)
-
-      # split tracked stocks into a list of symbols
-        tracked_stocks_list = user.tracked_stocks.split(',')
-        tracked_stocks_list.append(request.data.stock)
-
-        tracked_stocks_csv = ','.join(tracked_stocks_list)
-
-        serializer = UserSerializer(user, data={'tracked_stocks': tracked_stocks_csv}, partial=True)
-
-        if serializer.is_valid():
-            serializer.save()
-            return Response(f'{request.data.stock} successfully added', status=201)
-        else:
-            raise Exception
-    except Exception as e:
-        print(e)
-        return Response('Error adding a new stock to user table', status=401)
+    # Check if username already exists
+    if User.objects.filter(username=username).exists():
+        return Response({'error': 'This username is already taken.'}, status=status.HTTP_409_CONFLICT)
     
-@api_view(['PATCH'])
-def remove_stock(request):
+    # Create the user and corresponding tracked stocks table
     try:
-        user = User.objects.get(id=request.data.id)
+        user = User.objects.create_user(username=username, password=password, email=email)
+        TrackedStock.objects.create(user=user)
 
-      # split tracked stocks into a list of symbols
-        tracked_stocks_list = user.tracked_stocks.split(',')
-
-        if request.data.stock in tracked_stocks_list: 
-          tracked_stocks_list.remove(request.data.stock)
-          tracked_stocks_csv = ','.join(tracked_stocks_list)
-          serializer = UserSerializer(user, data={'tracked_stocks': tracked_stocks_csv}, partial=True)
-        else:
-          raise Exception
-
-        if serializer.is_valid():
-            serializer.save()
-            return Response(f'{request.data.stock} successfully removed', status=201)
-        else:
-            raise Exception
+        serializer = UserSerializer(user)
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
     except Exception as e:
-        print(e)
-        return Response('Error removing a stock to user table', status=401)
+        return Response({'error': 'An error occurred while creating the user.'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+    
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def get_user(request):
+    if request.method != 'GET':
+        return Response(status=status.HTTP_405_METHOD_NOT_ALLOWED)
+
+    # Get the user associated with the tokem
+    user = request.user
+    serializer = UserSerializer(user)
+    return Response(serializer.data, status=status.HTTP_200_OK)
+    
+
+
+# @api_view(['POST'])
+# @permission_classes([IsAuthenticated])
+# def user_logout(request):
+#     if request.method != 'POST':
+#         return Response(status=status.HTTP_405_METHOD_NOT_ALLOWED)
+
+#     username = request.data.get('username')
+#     password = request.data.get('password')
+#     user = authenticate(username=username, password=password)
+#     if not user:
+#       return Response(status=status.HTTP_401_UNAUTHORIZED)
+    
+#     logout(request)
+#     return Response({'message': 'Logout successful!'}, status=status.HTTP_200_OK)
+
+
+@api_view(['DELETE'])
+@permission_classes([IsAuthenticated])
+def user_deletion(request):
+    if request.method != 'DELETE':
+        return Response(status=status.HTTP_405_METHOD_NOT_ALLOWED)
+
+    request.user.delete()
+    return Response({'message': 'User deleted successfully!'}, status=status.HTTP_204_NO_CONTENT)

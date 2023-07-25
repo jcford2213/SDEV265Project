@@ -1,11 +1,14 @@
 # Listen for POST request containing stock ticker
-
-from rest_framework.decorators import api_view
+from rest_framework import status
+from rest_framework.decorators import api_view, permission_classes
 from rest_framework.response import Response
-
+from rest_framework.permissions import IsAuthenticated
 from .utils.yfinaceConnection import getStockData
 from .utils.timeSeriesAnalysisModels import getArModel, getMaModel, getArmaModel
 from .utils.plotModelResults import plot_model_weekly, plot_model_monthly
+
+from .models import TrackedStock
+from .serializers import TrackedStockSerializer
 
 
 @api_view(['POST'])
@@ -60,3 +63,86 @@ def returnTickerData(request):
           )
         
     return Response({'error': 'Invalid request method'}, status=405)
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_tracked_stocks(request):
+    if request.method != 'GET':
+        return Response(status=status.HTTP_405_METHOD_NOT_ALLOWED)
+    try:
+      tracked_stocks_model = TrackedStock.objects.get(user=request.user)
+    except TrackedStock.DoesNotExist:
+       return Response({'error': 'TrackedStock object not found for the current user.'}, status=status.HTTP_404_NOT_FOUND)
+    
+    # Serialize tracked_stocks_data in order to be returned over http
+    serializer = TrackedStockSerializer(tracked_stocks_model)
+
+    return Response(serializer.data, status=status.HTTP_200_OK)
+
+@api_view(['PUT'])
+@permission_classes([IsAuthenticated])
+def add_tracked_stock(request):
+    if request.method != 'PUT':
+        return Response(status=status.HTTP_405_METHOD_NOT_ALLOWED)
+    try:
+      tracked_stocks_model = TrackedStock.objects.get(user=request.user)
+      print(tracked_stocks_model.tracked_stocks, 'tracked stocks')
+    except TrackedStock.DoesNotExist:
+       return Response({'error': 'TrackedStock object not found for the current user.'}, status=status.HTTP_404_NOT_FOUND)
+    
+    new_ticker = request.data.get('tickerToAdd')
+
+    # Check if tracked_stocks_model is empty
+    if tracked_stocks_model.tracked_stocks != None:
+       # Convert data into a list and append new ticker
+      stocks_list = tracked_stocks_model.tracked_stocks.split(',')
+      print(len(stocks_list))
+      print(f'new_ticker is {new_ticker}')
+      stocks_list.append(new_ticker)
+      print(len(stocks_list))
+
+      # Convert list with new ticker into a comma seperated string and save the model
+      new_stocks_string = ','.join(stocks_list)
+      tracked_stocks_model.tracked_stocks = new_stocks_string
+    else:
+      tracked_stocks_model.tracked_stocks = new_ticker
+
+    # save the updated model
+    tracked_stocks_model.save()
+       
+
+    # Serialize tracked_stocks_data in order to be returned over http
+    serializer = TrackedStockSerializer(tracked_stocks_model)
+
+    return Response(serializer.data, status=status.HTTP_200_OK)
+    
+
+@api_view(['PUT'])
+@permission_classes([IsAuthenticated])
+def delete_tracked_stock(request):
+    if request.method != 'PUT':
+        return Response(status=status.HTTP_405_METHOD_NOT_ALLOWED)
+    try:
+      tracked_stocks_model = TrackedStock.objects.get(user=request.user)
+    except TrackedStock.DoesNotExist:
+       return Response({'error': 'TrackedStock object not found for the current user.'}, status=status.HTTP_404_NOT_FOUND)
+    
+    # Convert data into a list and remove ticker
+    stocks_list = tracked_stocks_model.tracked_stocks.split(',')
+    ticker = request.data.get('tracked_stock')
+
+    if ticker not in stocks_list:
+        return Response({'error': 'Ticker is not found in TrackedStock object.'}, status=status.HTTP_404_NOT_FOUND)
+
+    stocks_list.remove(ticker)
+
+    # Convert list with new ticker into a comma seperated string and save the model
+    new_stocks_string = ','.join(stocks_list)
+    tracked_stocks_model.tracked_stocks = new_stocks_string
+    tracked_stocks_model.save()
+
+    # Serialize tracked_stocks_data in order to be returned over http
+    serializer = TrackedStockSerializer(tracked_stocks_model)
+
+    return Response(serializer.data, status=status.HTTP_200_OK)
+    
