@@ -24,7 +24,7 @@ def getArModel(close_prices_week, close_prices_month):
 
 def getMaModel(close_prices_week, close_prices_month):
   ## MA Model
-  lag_order_ma = 3
+  lag_order_ma = 15
   model_ma = arima_model.ARIMA(close_prices_week, order=(0, 0, lag_order_ma)) ## There is no MA model in statsmodels library so we will use the ARIMA model restricting it to just its MA component
   model_fit_ma = model_ma.fit()
   fitted_values_weekly_ma = model_fit_ma.fittedvalues

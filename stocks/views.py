@@ -154,14 +154,14 @@ def delete_tracked_stock(request):
     try:
       tracked_stocks_model = TrackedStock.objects.get(user=request.user)
     except TrackedStock.DoesNotExist:
-       return Response({'error': 'TrackedStock object not found for the current user.'}, status=status.HTTP_404_NOT_FOUND)
+       return Response({'error': 'TrackedStock object not found for the current user.'}, status=status.HTTP_403_FORBIDDEN)
     
     # Convert data into a list and remove ticker
     stocks_list = tracked_stocks_model.tracked_stocks.split(',')
-    ticker = request.data.get('tracked_stock')
+    ticker = request.data.get('tickerToRemove')
 
     if ticker not in stocks_list:
-        return Response({'error': 'Ticker is not found in TrackedStock object.'}, status=status.HTTP_404_NOT_FOUND)
+        return Response({'error': 'Ticker is not found in TrackedStock object.'}, status=status.HTTP_406_NOT_ACCEPTABLE)
 
     stocks_list.remove(ticker)
 
