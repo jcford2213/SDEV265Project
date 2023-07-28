@@ -140,3 +140,5 @@ REST_FRAMEWORK = {
         
     ],
 }
+
+TOKEN_EXPIRATION_SECONDS = 10800

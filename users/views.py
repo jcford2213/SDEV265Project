@@ -58,13 +58,8 @@ def get_user(request):
 #     if request.method != 'POST':
 #         return Response(status=status.HTTP_405_METHOD_NOT_ALLOWED)
 
-#     username = request.data.get('username')
-#     password = request.data.get('password')
-#     user = authenticate(username=username, password=password)
-#     if not user:
-#       return Response(status=status.HTTP_401_UNAUTHORIZED)
-    
-#     logout(request)
+
+
 #     return Response({'message': 'Logout successful!'}, status=status.HTTP_200_OK)
 
 

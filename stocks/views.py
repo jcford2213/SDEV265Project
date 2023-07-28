@@ -12,7 +12,36 @@ from .serializers import TrackedStockSerializer
 
 
 @api_view(['POST'])
-def returnTickerData(request):
+def returnBasicTickerData(request):
+    if request.method == 'POST':
+        
+        # Check for existing ticker from client
+        if not request.data['ticker']:
+            return Response({'error': 'Ticker not provided'}, status=400)
+        
+        # Attempt to access ticker from yfinance
+        try:
+          #  Get all information from yFianance ticker
+          stockData = getStockData(request.data['ticker'])
+
+        except Exception as error:
+          #  Sends an error message to client. args[0]is where the message value is stored
+           return Response({'error': error.args[0]}, status=500)
+        
+        else:
+          # Sends successful response with correct payload to client
+          return Response(
+            {
+              'stockData': stockData['stockInfo']
+            },
+            status=200
+          )
+        
+    return Response({'error': 'Invalid request method'}, status=405)
+
+
+@api_view(['POST'])
+def returnAllTickerData(request):
     if request.method == 'POST':
         
         # Check for existing ticker from client
